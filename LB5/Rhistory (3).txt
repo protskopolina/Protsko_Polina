@@ -1,0 +1,3 @@
+install.packages(c("tidyverse", "knitr", "broom"))
+install.packages(c("readxl"))
+install.packages(c("tidyverse", "readxl", "broom", "knitr"))

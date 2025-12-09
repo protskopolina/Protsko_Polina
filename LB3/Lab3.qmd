@@ -1,0 +1,192 @@
+---
+title: "Лабораторна робота № 3. Основи вибіркового методу"
+author: "Процко Поліна"
+date: "`r Sys.Date()`"
+format: 
+  html:
+    toc: true
+    code-fold: show
+    self-contained: true
+editor: visual
+bibliography: references.bib
+lang: uk
+---
+
+## 1. Постановка завдання
+
+**Мета:** Засвоїти основи статистичного оцінювання характеристик випадкової величини на основі вибіркового підходу засобами мови програмування R [@manual_lab3].
+
+**Індивідуальне завдання (Еталонний варіант):** Випадкова величина $X$ має нормальний закон розподілу: $X \sim N(a, \sigma^2)$ з параметрами: $$a = 0, \quad \sigma = 1$$
+
+Необхідно: 1. Згенерувати дві вибірки обсягом $n_1 = 100$ та $n_2 = 10000$. 2. Побудувати графіки: гістограму з теоретичною кривою, емпіричну функцію розподілу, boxplot. 3. Обчислити точкові оцінки параметрів (середнє, дисперсія, асиметрія, ексцес). 4. Звести результати у порівняльну таблицю.
+
+------------------------------------------------------------------------
+
+## 2. Короткі теоретичні відомості
+
+Вибірковий метод полягає у вивченні властивостей генеральної сукупності за допомогою випадкової вибірки. Основні характеристики:
+
+-   **Вибіркове середнє:** $\bar{x} = \frac{1}{n}\sum x_i$ (оцінка $a$).
+-   **Вибіркова дисперсія (виправлена):** $s^2 = \frac{1}{n-1}\sum (x_i - \bar{x})^2$ (оцінка $\sigma^2$).
+-   **Асиметрія (**$A_s$): Характеризує скошеність розподілу. Для нормального розподілу $A_s=0$.
+-   **Ексцес (**$E_k$): Характеризує гостроверхість. Для нормального розподілу $E_k=0$ (у "excess" формі).
+
+------------------------------------------------------------------------
+
+## 3. Виконання роботи
+
+### 3.1 Підготовка середовища та функцій
+
+```{r}
+#| label: setup
+#| message: false
+#| warning: false
+
+library(knitr)
+library(ggplot2)
+
+# Функція для розрахунку асиметрії
+calc_skewness <- function(x) {
+  n <- length(x)
+  m3 <- sum((x - mean(x))^3) / n
+  s3 <- sqrt(var(x) * (n-1)/n)^3
+  return(m3 / s3)
+}
+
+# Функція для розрахунку ексцесу (excess kurtosis, норма = 0)
+calc_kurtosis <- function(x) {
+  n <- length(x)
+  m4 <- sum((x - mean(x))^4) / n
+  s4 <- var(x)^2 * ((n-1)/n)^2
+  return((m4 / s4) - 3)
+}
+
+# Функція для комплексного аналізу вибірки
+analyze_sample <- function(x, n_name) {
+  # Розрахунок статистик
+  m_hat <- mean(x)
+  var_hat <- var(x) # Виправлена дисперсія
+  sd_hat <- sd(x)
+  skew <- calc_skewness(x)
+  kurt <- calc_kurtosis(x)
+  
+  # Вивід результатів у консоль (для контролю)
+  cat(paste0("\n--- Аналіз вибірки ", n_name, " ---\n"))
+  cat("Середнє:", round(m_hat, 4), "\n")
+  cat("СКВ:", round(sd_hat, 4), "\n")
+  
+  # Повертаємо вектор статистик для таблиці
+  return(c(m_hat, var_hat, sd_hat, skew, kurt))
+}
+```
+
+### 3.2 Генерація даних та аналіз для n = 100
+
+```{r}
+#| label: analysis-100
+#| fig-height: 8
+
+set.seed(42) # Для відтворюваності
+a_theor <- 0
+sigma_theor <- 1
+
+# Генерація
+n1 <- 100
+sample_100 <- rnorm(n1, mean = a_theor, sd = sigma_theor)
+
+# Аналіз статистик
+stats_100 <- analyze_sample(sample_100, "n=100")
+
+# Візуалізація (Комплексний графік)
+par(mfrow = c(2, 2)) # Сітка 2х2
+
+# 1. Гістограма + Теоретична крива
+hist(sample_100, freq = FALSE, main = "Гістограма (n=100)", col = "lightblue", xlab = "X")
+curve(dnorm(x, a_theor, sigma_theor), add = TRUE, col = "red", lwd = 2)
+
+# 2. Емпірична функція розподілу
+plot(ecdf(sample_100), main = "ECDF (n=100)", col = "blue", verticals = TRUE)
+curve(pnorm(x, a_theor, sigma_theor), add = TRUE, col = "red", lty = 2)
+
+# 3. Boxplot
+boxplot(sample_100, horizontal = TRUE, main = "Boxplot (n=100)", col = "lightgreen")
+
+# 4. Q-Q Plot
+qqnorm(sample_100, main = "Q-Q Plot"); qqline(sample_100, col = "red")
+
+par(mfrow = c(1, 1)) # Скидання параметрів графіки
+```
+
+### 3.3 Генерація даних та аналіз для n = 10000
+
+```{r}
+#| label: analysis-10000
+#| fig-height: 8
+
+# Генерація
+n2 <- 10000
+sample_10k <- rnorm(n2, mean = a_theor, sd = sigma_theor)
+
+# Аналіз статистик
+stats_10k <- analyze_sample(sample_10k, "n=10000")
+
+# Візуалізація
+par(mfrow = c(2, 2))
+
+# 1. Гістограма
+hist(sample_10k, freq = FALSE, main = "Гістограма (n=10000)", col = "lightblue", xlab = "X", breaks = 50)
+curve(dnorm(x, a_theor, sigma_theor), add = TRUE, col = "red", lwd = 2)
+
+# 2. ECDF
+plot(ecdf(sample_10k), main = "ECDF (n=10000)", col = "blue", verticals = TRUE, pch = NA)
+curve(pnorm(x, a_theor, sigma_theor), add = TRUE, col = "red", lty = 2)
+
+# 3. Boxplot
+boxplot(sample_10k, horizontal = TRUE, main = "Boxplot (n=10000)", col = "lightgreen")
+
+# 4. Q-Q Plot
+qqnorm(sample_10k, main = "Q-Q Plot"); qqline(sample_10k, col = "red")
+
+par(mfrow = c(1, 1))
+```
+
+### 3.4 Зведена таблиця результатів
+
+Порівняємо отримані вибіркові оцінки з теоретичними значеннями.
+
+```{r}
+#| label: results-table
+
+# Створення таблиці
+results_table <- data.frame(
+  Parameter = c("Середнє (a)", "Дисперсія (s^2)", "СКВ (s)", "Асиметрія (As)", "Ексцес (Ek)"),
+  Theoretical = c(a_theor, sigma_theor^2, sigma_theor, 0, 0),
+  Sample_100 = round(stats_100, 4),
+  Sample_10000 = round(stats_10k, 4)
+)
+
+# Розрахунок похибок
+results_table$Error_100 = abs(results_table$Sample_100 - results_table$Theoretical)
+results_table$Error_10000 = abs(results_table$Sample_10000 - results_table$Theoretical)
+
+kable(results_table, caption = "Порівняння теоретичних та емпіричних характеристик")
+```
+
+------------------------------------------------------------------------
+
+## 4. Висновки
+
+У ході лабораторної роботи було досліджено властивості вибіркового методу на прикладі нормального розподілу $N(0, 1)$.
+
+1.  **Стійкість оцінок:** При збільшенні обсягу вибірки з $n=100$ до $n=10000$ точність оцінок параметрів значно зросла. Похибка оцінки середнього зменшилась приблизно в $\sqrt{100} = 10$ разів, що узгоджується з законом великих чисел.
+2.  **Візуалізація:**
+    -   Гістограма для $n=10000$ майже ідеально повторює теоретичну криву Гауса.
+    -   Емпірична функція розподілу для великої вибірки зливається з теоретичною.
+3.  **Форма розподілу:** Значення асиметрії та ексцесу для $n=10000$ наближаються до нуля, підтверджуючи нормальність згенерованих даних.
+
+------------------------------------------------------------------------
+
+## Перелік посилань
+
+::: {#refs}
+:::
